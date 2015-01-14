@@ -280,6 +280,42 @@ class ContentValidationListenerTest extends TestCase
         $this->assertInternalType('array', $asArray['validation_messages']['bar']);
     }
 
+    public function testReturnsApiProblemResponseIfAnInputFilterThrowsAnException()
+    {
+        $services = new ServiceManager();
+        $factory  = new InputFilterFactory();
+        $services->setService('FooValidator', $factory->createInputFilter(array(
+            'foo' => array(
+                'name' => 'foo',
+                'validators' => array(
+                    array('name' => 'DateTime'),
+                ),
+            ),
+        )));
+        $listener = new ContentValidationListener(array(
+            'Foo' => array('input_filter' => 'FooValidator'),
+        ), $services);
+
+        $request = new HttpRequest();
+        $request->setMethod('POST');
+
+        $matches = new RouteMatch(array('controller' => 'Foo'));
+
+        $dataParams = new ParameterDataContainer();
+        $dataParams->setBodyParams(array(
+            'foo' => '12314',
+        ));
+
+        $event   = new MvcEvent();
+        $event->setRequest($request);
+        $event->setRouteMatch($matches);
+        $event->setParam('ZFContentNegotiationParameterData', $dataParams);
+
+        $response = $listener->onRoute($event);
+        $this->assertInstanceOf('ZF\ApiProblem\ApiProblemResponse', $response);
+        return $response;
+    }
+
     public function testReturnsApiProblemResponseIfParametersAreMissing()
     {
         $services = new ServiceManager();

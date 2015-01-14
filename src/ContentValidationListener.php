@@ -213,8 +213,20 @@ class ContentValidationListener implements ListenerAggregateInterface
         }
 
         $inputFilter->setData($data);
-        if ($inputFilter->isValid()) {
-            return;
+        /**
+         * A specific Filter may throw an Exception if an invalid value is given.
+         * Convert any Exception to return a failed validation response
+         */
+        try {
+            if ($inputFilter->isValid()) {
+                return;
+            }
+        } catch (FilterInvalidArgumentException $ex) {
+            return new ApiProblemResponse(
+                new ApiProblem(422, 'Invalid value supplied to filter', null, null, array(
+                    'validation_messages' => array($ex->getMessage()),
+                ))
+            );
         }
 
         return new ApiProblemResponse(
